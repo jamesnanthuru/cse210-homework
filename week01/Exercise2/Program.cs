@@ -1,4 +1,7 @@
 using System;
+//Author: James Nanthuru
+//Course: CSE210
+//Description: Second lesson for week one of C# language
 
 class Program
 {
