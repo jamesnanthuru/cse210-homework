@@ -1,51 +1,90 @@
-using System.Collections.Generic;
-using System.IO;
 public class Journal
 {
-    List<Entry> _entries; //declaring a variable named _entry exists is going to hold a List of custom Entry objec,But no memory allocated yet
+    public List<Entry> Entries { get; set; }
+
     public Journal()
     {
-       _entries = new List<Entry>();  // when we initalize like we did we have give the list of entry a memory to save
+        Entries = new List<Entry>();
     }
 
-   public void AddEntry(Entry newEntry)
-   {
-      _entries.Add(newEntry);  // This methods add the new Entry object into the _entries list, newEntry is the name of the parameter
-   }
-
-   public void DisplayAll()
+    public void WriteNewEntry(PromptGenerator promptGenerator)
     {
-        foreach (Entry entry in _entries)
+        Entry newEntry = new Entry();
+
+        newEntry.Date = DateTime.Today.ToString("MM/dd/yyyy");
+        newEntry.Prompt = promptGenerator.GetPrompt();
+        Console.WriteLine($"{newEntry.Prompt}");
+        newEntry.Text = Console.ReadLine();
+        Entries.Add(newEntry);
+
+        Console.WriteLine("Entry saved successfully.");
+    }
+
+    public void DisplayJournal()
+    {
+        foreach (Entry entry in Entries)
         {
-           entry.Display();
+            Console.WriteLine($"{entry.Date}\nPrompt: {entry.Prompt}\nResponse: {entry.Text}\n");
         }
     }
 
-    public void SaveToFile(string filename)
-    { 
-        Console.WriteLine("Saving file.......");
-       // Open the file for writing
-       using (StreamWriter outputFile = new StreamWriter(filename))
+    public void SaveJournalToFile(string filename)
+    {
+        using (StreamWriter outputFile = new StreamWriter(filename))
         {
-            // visit each Entry object on the list
-            foreach (Entry entry in _entries)
+            foreach (Entry entry in Entries)
             {
-                outputFile.WriteLine(entry.GetAsString());
+                outputFile.WriteLine($"Date: {entry.Date}|{entry.Prompt}|{entry.Text}");
             }
-            //Console.WriteLine($"File saved at: {Path.GetFullPath(filename )}");
         }
-
+        Console.WriteLine($"Journal saved to {filename}.");
     }
 
-public void ReadFromFile(string filename)
-{
-    string[] lines = System.IO.File.ReadAllLines(filename);
-    foreach(string line in lines)
+    public void LoadJournalFromFile(string filename)
     {
-        string[] parts = line.Split(',');
-        Entry e = new Entry(parts[0], parts[1], parts[2]);
-        _entries.Add(e); // Add to the actual journal
-    }
-}
+        Entries.Clear(); // Clear entries.
 
+        try
+        {
+            if (File.Exists(filename))
+            {
+                string[] lines = File.ReadAllLines(filename);
+
+                foreach (string line in lines)
+                {
+
+                    if (string.IsNullOrWhiteSpace(line))
+                    {
+                        continue; // Skip empty lines
+                    }
+
+                    string[] parts = line.Split('|');
+                    
+                    if (parts.Length == 3)
+                    {
+                        Entry entry = new Entry
+                        {
+                            Date = parts[0].Trim(),
+                            Prompt = parts[1].Trim(),
+                            Text = parts[2].Trim()
+                        };
+                        Entries.Add(entry);
+                    }
+
+            }
+            Console.WriteLine($"Journal loaded from {filename} successfully.");
+
+            
+        }
+        else
+        {
+            Console.WriteLine($"File {filename} not found.");
+        }
+        
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error loading the journal: {ex.Message}");
+        }
+    }
 }

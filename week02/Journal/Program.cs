@@ -1,128 +1,92 @@
-// Exceeding Requirements: 
-// 1. Added an automated file management system that detects existing journal files, 
-//    lists them for easy selection, and automatically remembers the active filename 
-//    for subsequent saves without repeatedly prompting the user.
-// 2. Implemented CSV file formatting so journal entries can be opened and viewed cleanly in Excel.
-
 using System;
+using System.Collections.Generic;
+using System.IO;
+using System.Threading;
 
-class Program
+public class Program
 {
+    private static Timer reminderTimer;
+    private static bool remindUser = true;
+
     static void Main(string[] args)
     {
-        PromptGenerator promptGenerator = new PromptGenerator();
-        Journal myjournal = new Journal();
-        string currentFilename = "";
+        int userInput = -1;
+        Journal journal = new Journal();
+        PromptGenerator prompt = new PromptGenerator();
 
-        string choice = "";
-        while (choice != "5")
+        // Set up a timer to remind the user to write in their journal
+        int reminderIntervalMinutes = 60; // Adjust the interval as needed
+        reminderTimer = new Timer(ReminderCallback, null, TimeSpan.Zero, TimeSpan.FromMinutes(reminderIntervalMinutes));
+
+        while (true)
         {
-            Console.WriteLine("\nJournal Menu");
-            Console.WriteLine("1. Write a new entry");
-            Console.WriteLine("2. Display the journal");
-            Console.WriteLine("3. Save the journal");
-            Console.WriteLine("4. Load the journal");
-            Console.WriteLine("5. Quit");
-            Console.Write("Choose an option: ");
+            const string MENU = "Please, select one of the following choices:\n1. Write\n2. Display\n3. Save\n4. Load\n5. Set Reminder\n6. Quit";
+            Console.WriteLine(MENU);
 
-           choice = Console.ReadLine() ;  
-           if (choice == "1")
+            if (int.TryParse(Console.ReadLine(), out userInput))
             {
-                Write(myjournal, promptGenerator);
-            }
+                switch (userInput)
+                {
+                    case 1: // WRITE
+                        journal.WriteNewEntry(prompt);
+                        break;
 
-           else if (choice == "2")
-            {
-                myjournal.DisplayAll();
-            }
+                    case 2: // DISPLAY
+                        journal.DisplayJournal();
+                        break;
 
-           else if (choice == "3")
-            {
-                Save(myjournal, ref currentFilename);
-            }
+                    case 3: // SAVE
+                        Console.Write("Enter filename to save journal: ");
+                        string saveFilename = Console.ReadLine();
+                        journal.SaveJournalToFile(saveFilename);
+                        break;
 
-            else if (choice == "4")
-            {
-                Load( myjournal,  ref currentFilename);
-            }
+                    case 4: // LOAD
+                        Console.Write("Enter filename to load journal: ");
+                        string loadFilename = Console.ReadLine();
+                        journal.LoadJournalFromFile(loadFilename);
+                        break;
 
-            else
-            {
-                 Console.WriteLine("Invalid option");
-            }
-        }
-        Console.WriteLine("Goodbye!");
+                    case 5: // SET REMINDER
+                        SetReminder();
+                        break;
 
-        // entry write function
-        static void Write(Journal myjournal, PromptGenerator promptGenerator)
-        {
-            string randomPrompt = promptGenerator.GetRandomPrompt();
+                    case 6: // QUIT
+                        Console.WriteLine("Exiting the program. Goodbye!");
+                        Environment.Exit(0);
+                        break;
 
-
-            Console.WriteLine(randomprompt);
-            Console.Write("> ");
-            string response = Console.ReadLine();
-
-            DateTime theCurrentTime = DateTime.Now;
-            string currentDate = theCurrentTime.ToString("yyyy-MM-dd HH:mm:ss");
-            Entry newEntry = new Entry(currentDate, randomprompt, response);
-            myjournal.AddEntry(newEntry);
-            //myjournal.DisplayAll();
-        }
-
-        static void Save(Journal myjournal, ref string currentFilename)  // use ref to remember the filenamefor the next time 
-        {
-            string filename = "";
-
-            // Check if it the first time 
-            if (string.IsNullOrEmpty(currentFilename))
-            {
-                Console.Write("Name the file: ");
-                currentFilename = Console.ReadLine() + ".csv";
-                filename = currentFilename;
+                    default:
+                        Console.WriteLine("Invalid option. Please try again.");
+                        break;
+                }
             }
             else
             {
-                // Atomatically use the existing journal file
-                filename = currentFilename;
+                Console.WriteLine("Invalid input. Please enter a number.");
             }
-            // Save the journal to the selected file
-            myjournal.SaveToFile(filename);
         }
+    }
 
-        static void Load(Journal myjournal, ref string currentFilename)
-{
-    // Look for all .csv files in the current directory
-    string[] files = Directory.GetFiles(".", "*.csv");
-
-    if (files.Length == 0)
+    private static void ReminderCallback(object state)
     {
-        Console.WriteLine("No journal files found. Please save a journal first.");
-        return;
+        if (remindUser)
+        {
+            Console.WriteLine("Don't forget to write in your journal today!");
+        }
     }
 
-    Console.WriteLine("\nAvailable Journals:");
-    for (int i = 0; i < files.Length; i++)
+    private static void SetReminder()
     {
-        // Print just the file name, not the full path
-        Console.WriteLine($"{i + 1}. {Path.GetFileName(files[i])}");
+        Console.Write("Set a reminder (in minutes) for writing in your journal: ");
+        if (int.TryParse(Console.ReadLine(), out int reminderMinutes) && reminderMinutes > 0)
+        {
+            reminderTimer.Change(TimeSpan.FromMinutes(reminderMinutes), TimeSpan.FromMinutes(reminderMinutes));
+            Console.WriteLine($"Reminder set for every {reminderMinutes} minutes.");
+        }
+        else
+        {
+            Console.WriteLine("Invalid input. Please enter a positive number of minutes.");
+        }
     }
-
-    Console.Write("Enter the name of the file to load (e.g., myjournal.csv): ");
-    currentFilename = Console.ReadLine();
-
-    if (!File.Exists(currentFilename))
-    {
-        Console.WriteLine("File does not exist. Returning to menu.");
-        return;
-    }
-
-    List<Entry> savedEntries = myjournal.ReadFromFile(currentFilename);
-    foreach (Entry entry in savedEntries)
-    {
-        entry.Display();
-    }
-}
-    }
-        
 }
